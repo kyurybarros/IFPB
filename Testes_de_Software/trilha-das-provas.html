@@ -1,0 +1,724 @@
+<title>Trilha das Provas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: trilha vertical sinuosa (mapa em SVG) atravessando quatro regiões; barra fixa embaixo com o próximo desafio; desafio em cartão; certificado no fim. */
+:root{
+  --bg:#f4efe2; --surface:#fffdf7; --sunk:#ebe3cf; --ink:#2b2a22; --muted:#6e6a58; --line:#d8cdb3;
+  --trail:#c39a5b; --trail-edge:#9c7741; --node:#fffdf7; --lock:#cfc4aa;
+  --ok:#3d8a2a; --ok-soft:#e1efd3; --bad:#c2452d; --bad-soft:#f8e1d9; --gold:#d99a1e; --accent:#2f6f8f;
+  --r1:#dfecc9; --r2:#f2e2bb; --r3:#cfe5db; --r4:#e6dcef; --deco:#7aa45a; --deco2:#4f7f3c; --roof:#c2452d;
+  --display:"Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17160f; --surface:#211f16; --sunk:#2c291d; --ink:#efe8d4; --muted:#aba38a; --line:#3d392a;
+  --trail:#8d7140; --trail-edge:#5e4b2a; --node:#2c291d; --lock:#4a4533;
+  --ok:#86c86a; --ok-soft:#24361b; --bad:#ff8566; --bad-soft:#3d221a; --gold:#f2bb4a; --accent:#7cc1e0;
+  --r1:#1f2a17; --r2:#2e2716; --r3:#16282a; --r4:#271f30; --deco:#3f6a2e; --deco2:#2f5223; --roof:#a8432f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17160f; --surface:#211f16; --sunk:#2c291d; --ink:#efe8d4; --muted:#aba38a; --line:#3d392a;
+  --trail:#8d7140; --trail-edge:#5e4b2a; --node:#2c291d; --lock:#4a4533;
+  --ok:#86c86a; --ok-soft:#24361b; --bad:#ff8566; --bad-soft:#3d221a; --gold:#f2bb4a; --accent:#7cc1e0;
+  --r1:#1f2a17; --r2:#2e2716; --r3:#16282a; --r4:#271f30; --deco:#3f6a2e; --deco2:#2f5223; --roof:#a8432f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 120px}
+.wrap{max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.05;text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,label:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.btn{border:0;border-radius:12px;padding:12px 20px;font-family:var(--display);font-weight:700;font-size:18px;background:var(--ink);color:var(--bg);box-shadow:0 3px 0 var(--trail-edge)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--trail-edge)}
+.btn.alt{background:var(--surface);color:var(--ink);border:2px solid var(--ink)}
+.btn:disabled{opacity:.5;cursor:default}
+.note{font-size:14px;color:var(--muted);margin:0}
+
+/* início */
+.title{display:flex;flex-direction:column;gap:4px}
+.title h1{font-size:clamp(46px,12vw,72px);font-weight:800;letter-spacing:-.01em}
+.title h1 em{font-style:normal;color:var(--gold)}
+.title p{margin:0;color:var(--muted);max-width:56ch}
+.step{display:flex;flex-direction:column;gap:10px}
+.step h2{font-size:22px}
+.namebox input{width:100%;font:inherit;font-size:18px;padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)}
+.chars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.char{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:10px 8px 12px;cursor:pointer}
+.char input{position:absolute;opacity:0;pointer-events:none}
+.char svg{width:86px;height:86px}
+.char b{font-family:var(--display);font-size:18px;line-height:1.1}
+.char span{font-size:13px;color:var(--muted)}
+.char:has(input:checked){border-color:var(--gold);background:var(--sunk);box-shadow:0 0 0 3px var(--gold) inset}
+.char:has(input:checked) svg{animation:hop .6s ease-in-out infinite alternate}
+@keyframes hop{to{transform:translateY(-5px)}}
+.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.mode{display:flex;flex-direction:column;gap:2px;border:2px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface);cursor:pointer}
+.mode input{position:absolute;opacity:0;pointer-events:none}
+.mode b{font-family:var(--display);font-size:18px}
+.mode span{font-size:13px;color:var(--muted)}
+.mode:has(input:checked){border-color:var(--gold);box-shadow:0 0 0 3px var(--gold) inset}
+.resume{display:flex;gap:12px;align-items:center;background:var(--surface);border:2px dashed var(--gold);border-radius:14px;padding:12px}
+.resume svg{width:56px;height:56px;flex-shrink:0}
+.resume div{flex:1;min-width:0}
+.err{color:var(--bad);font-size:14px;margin:0}
+
+/* mapa */
+.mapwrap{border-radius:18px;overflow:hidden;border:2px solid var(--line);background:var(--r1)}
+#map{display:block;width:100%;height:auto}
+.rlabel{font-family:var(--display);font-weight:800;font-size:17px;fill:var(--ink);opacity:.8}
+.rsub{font-family:var(--mono);font-size:8.5px;fill:var(--muted);letter-spacing:.06em}
+.nnum{font-family:var(--display);font-weight:800;font-size:13px;text-anchor:middle;dominant-baseline:central;fill:var(--ink)}
+.node circle.base{fill:var(--node);stroke:var(--trail-edge);stroke-width:3}
+.node.locked circle.base{fill:var(--lock);stroke:var(--lock)}
+.node.locked .nnum{fill:var(--muted)}
+.node.ok circle.base{fill:var(--ok);stroke:var(--ok)} .node.ok .nnum{fill:var(--surface)}
+.node.bad circle.base{fill:var(--bad);stroke:var(--bad)} .node.bad .nnum{fill:var(--surface)}
+.node.next circle.ring{fill:none;stroke:var(--gold);stroke-width:3;animation:pulse 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(1.25)}}
+.hero-bob.walking{animation:bob .28s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(-4px) rotate(3deg)}}
+.hero-bob.cheer{animation:cheer .5s ease-in-out 2}
+@keyframes cheer{50%{transform:translateY(-12px)}}
+.shadow{fill:#000;opacity:.18}
+
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:2px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.barin{max-width:620px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.barin .who{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.barin .who svg{width:40px;height:40px;flex-shrink:0}
+.barin .who div{min-width:0}
+.barin .who b{display:block;font-family:var(--display);font-size:17px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stars{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stars i{font-style:normal;color:var(--gold)}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.link{background:none;border:0;color:var(--muted);text-decoration:underline;font-size:14px;padding:4px}
+
+/* desafio */
+.card{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.chead{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.tag{font-family:var(--mono);font-size:12px;padding:3px 8px;border-radius:6px;background:var(--sunk);color:var(--muted)}
+.q{font-family:var(--body);font-weight:700;font-size:clamp(17px,4.2vw,20px);line-height:1.35;margin:0}
+.ctx{background:var(--sunk);border-left:4px solid var(--trail);border-radius:0 10px 10px 0;padding:12px 14px;font-size:15px}
+.items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.items li{display:flex;gap:10px;font-size:15.5px}
+.rn{font-family:var(--mono);font-weight:700;min-width:2.4em;flex-shrink:0;color:var(--accent)}
+.ar{display:flex;flex-direction:column;gap:6px;font-size:15.5px}
+.ar p{margin:0;display:flex;gap:6px}
+.ar .porque{font-family:var(--mono);font-weight:700;letter-spacing:.14em;color:var(--muted);justify-content:center;font-size:13px}
+.ask{margin:0;font-weight:700;font-size:15px}
+.code{background:var(--sunk);border-radius:10px;overflow-x:auto;padding:6px 0;font-family:var(--mono);font-size:13.5px}
+.ln{display:flex;min-width:max-content;padding:2px 14px 2px 8px;white-space:pre}
+.ln .n{color:var(--muted);width:2.2em;flex-shrink:0;user-select:none}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:11px 13px}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt .k{font-family:var(--display);font-weight:800;font-size:16px;min-width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:var(--sunk);flex-shrink:0}
+.opt:disabled{cursor:default}
+.opt.ok{border-color:var(--ok);background:var(--ok-soft)} .opt.ok .k{background:var(--ok);color:var(--surface)}
+.opt.bad{border-color:var(--bad);background:var(--bad-soft)} .opt.bad .k{background:var(--bad);color:var(--surface)}
+.fb{border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.fb.ok{background:var(--ok-soft)} .fb.bad{background:var(--bad-soft)}
+.fb .v{font-family:var(--display);font-weight:800;font-size:20px;line-height:1.1}
+.fb.ok .v{color:var(--ok)} .fb.bad .v{color:var(--bad)}
+.fb p{margin:0}
+.fb .ref{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.srcl{font-size:13px}.srcl a{color:var(--accent);font-weight:700}
+.rev{border:2px dashed var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.rev p{margin:0;font-size:15px}
+
+/* certificado */
+.cert{position:relative;background:var(--surface);border-radius:6px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.cert .frame{border:3px double var(--gold);border-radius:4px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;
+  background:radial-gradient(circle at 50% 0%, var(--sunk), transparent 60%)}
+.cert h2{font-size:clamp(30px,8vw,44px);font-weight:800;letter-spacing:.01em}
+.cert .who{font-family:var(--display);font-size:clamp(28px,7.5vw,40px);font-weight:700;color:var(--accent);border-bottom:2px solid var(--line);padding:0 12px 2px;line-height:1.15;word-break:break-word}
+.cert p{margin:0;max-width:44ch}
+.cert .avatar svg{width:92px;height:92px}
+.seal{width:84px;height:84px}
+.cstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%;max-width:440px}
+.cstats div{background:var(--bg);border-radius:8px;padding:6px 4px;display:flex;flex-direction:column}
+.cstats b{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums}
+.cstats span{font-size:10.5px;color:var(--muted);line-height:1.2}
+.cfoot{display:flex;justify-content:space-between;gap:12px;width:100%;max-width:440px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.disclaimer{font-size:11.5px;color:var(--muted)}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.actions .btn{flex:1 1 200px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap" id="app"></div>
+<div class="bar" id="bar" hidden></div>
+<script>
+// ---------- BANCO: QUESTÕES OFICIAIS (texto adaptado; conteúdo e gabarito oficiais) ----------
+const EIXOS = {
+ 1:{nome:"Fundamentos e processo de teste"},
+ 2:{nome:"Níveis e tipos de teste"},
+ 3:{nome:"Técnicas e ferramentas"},
+ 4:{nome:"Qualidade, requisitos e configuração"}
+};
+const AR = [
+ "As asserções I e II são proposições verdadeiras, e a II é uma justificativa correta da I.",
+ "As asserções I e II são proposições verdadeiras, mas a II não é uma justificativa correta da I.",
+ "A asserção I é uma proposição verdadeira, e a II é uma proposição falsa.",
+ "A asserção I é uma proposição falsa, e a II é uma proposição verdadeira.",
+ "As asserções I e II são proposições falsas."
+];
+const I3 = ["I, apenas.","III, apenas.","I e II, apenas.","II e III, apenas.","I, II e III."];
+const CE = ["Certo","Errado"];
+const URL = {
+ enade:"https://www.gov.br/inep/pt-br/areas-de-atuacao/avaliacao-e-exames-educacionais/enade/provas-e-gabaritos",
+ mec15:"https://www.estudegratis.com.br/images/provas/35090-cespe-2015-mec-analista-de-teste-e-qualidade-prova.pdf",
+ mec15g:"https://www.estudegratis.com.br/images/provas/35090-cespe-2015-mec-analista-de-teste-e-qualidade-gabarito.pdf",
+ mec11:"https://www.estudegratis.com.br/images/provas/21279-cespe-2011-mec-analista-de-teste-de-qualidade-prova.pdf",
+ mec11g:"https://www.estudegratis.com.br/images/provas/21279-cespe-2011-mec-analista-de-teste-de-qualidade-gabarito.pdf",
+ ifsc:"https://www.qconcursos.com/questoes-de-concursos/questoes/13bcfa3f-08",
+ ieses:"https://www.qconcursos.com/questoes-de-concursos/questoes/55fb227e-f6"
+};
+const M15 = n => ({src:`Cespe/Cebraspe · MEC 2015 · Analista de Teste e Qualidade · item ${n}`, url:URL.mec15, gab:URL.mec15g});
+const M11 = n => ({src:`Cespe/UnB · MEC 2011 · Analista de Teste e Qualidade · item ${n}`, url:URL.mec11, gab:URL.mec11g});
+const EN = (ano,q,curso="Tecnologia em Análise e Desenvolvimento de Sistemas") => ({src:`Enade ${ano} · ${curso} · questão ${q}`, url:URL.enade});
+const ce = (a,n,mk,q,c,e,rv) => Object.assign({a,f:"certo/errado",q,o:CE,c,e,rv},mk(n));
+
+const Q = [
+// ===== REGIÃO 1: FUNDAMENTOS E PROCESSO =====
+ce(1,82,M15,"Os testes buscam garantir a confiabilidade do software e podem comprovar que ele está livre de defeitos em todas as circunstâncias de uso.",1,
+ "Errado. Teste pode mostrar a presença de defeitos, nunca a ausência. Nenhuma suíte cobre todas as entradas e situações de uso.",
+ "Princípio clássico (Dijkstra): o teste exercita uma amostra do comportamento possível. Passar nos testes aumenta a confiança, mas não prova correção; para isso existem técnicas como provas formais, ainda assim relativas à especificação."),
+ce(1,66,M15,"As técnicas de projeto de testes podem ser divididas em estáticas, como revisões e análise estática, e dinâmicas, que incluem técnicas de caixa-branca, baseadas em experiência e de caixa-preta.",0,
+ "Certo. É a classificação do ISTQB: estáticas não executam o código; dinâmicas executam e se dividem em caixa-preta (especificação), caixa-branca (estrutura) e baseadas em experiência.",
+ "Teste estático analisa artefatos sem executá-los (revisões, inspeções, análise estática) e encontra defeitos cedo. Teste dinâmico executa o software e encontra falhas. Entre as dinâmicas: caixa-preta (particionamento, valor limite, tabela de decisão), caixa-branca (cobertura de comandos, ramos, caminhos) e experiência (teste exploratório, error guessing)."),
+ce(1,79,M11,"Na definição da estratégia de teste, deve-se indicar o gerente do projeto de testes que aprovará o plano e identificar os riscos do projeto de testes; os riscos de negócio não são identificados, por estarem fora do projeto de testes.",1,
+ "Errado. Os riscos de negócio (produto) são justamente o que orienta a priorização dos testes; a estratégia identifica tanto riscos de projeto quanto riscos de produto.",
+ "Teste baseado em risco: risco = probabilidade × impacto. Riscos de projeto afetam a execução dos testes (prazo, equipe, ambiente). Riscos de produto ou de negócio são falhas que podem prejudicar o usuário ou a organização, e definem onde testar mais."),
+ce(1,88,M11,"O plano de teste deve conter os tipos de teste e a metodologia; os critérios de aceitação ficam fora do plano e pertencem à análise de riscos.",1,
+ "Errado. Critérios de aprovação e de aceitação (e critérios de entrada e saída) fazem parte do plano de teste.",
+ "Um plano de teste (IEEE 829 / ISO/IEC/IEEE 29119) reúne escopo, itens e funcionalidades a testar, abordagem, critérios de aprovação/reprovação e de suspensão, entregáveis, ambiente, responsabilidades, cronograma e riscos. Critérios de saída dizem quando o teste pode ser encerrado."),
+ce(1,91,M11,"Os testes devem ser executados periodicamente, conforme cronograma, independentemente do surgimento de novas versões do software.",1,
+ "Errado. A execução é disparada pelas mudanças: cada nova versão ou correção pede reteste e regressão.",
+ "Testes de regressão reexecutam casos existentes sempre que algo muda (correção, nova funcionalidade, atualização de ambiente). Em integração contínua, a suíte roda a cada build; a frequência acompanha as mudanças, não um calendário fixo."),
+ce(1,96,M11,"Um defeito só é considerado identificado quando o patrocinador do projeto o valida formalmente.",1,
+ "Errado. O defeito é identificado e registrado pela equipe de teste ao observar a divergência entre resultado esperado e obtido; a triagem decide depois prioridade e correção.",
+ "Ciclo de vida do defeito: registro (novo) → análise/triagem → atribuído → corrigido → reteste → fechado (ou reaberto). Um bom relato traz passos, ambiente, entrada, resultado esperado, resultado obtido e evidência."),
+ce(1,98,M11,"O log de teste registra os eventos ocorridos no projeto de desenvolvimento do software.",1,
+ "Errado. O log de teste registra, em ordem cronológica, os detalhes da execução dos testes, não os eventos do projeto de desenvolvimento.",
+ "Documentos de teste (IEEE 829): plano, especificação de projeto de teste, especificação de casos, especificação de procedimentos, log de teste (registro cronológico da execução), relatório de incidente (eventos que pedem investigação) e relatório de resumo do teste."),
+ce(1,99,M11,"Ocorrências que exigem investigação pela equipe de desenvolvimento devem ser documentadas no relatório de incidente de teste.",0,
+ "Certo. O relatório de incidente registra qualquer evento observado durante o teste que precise ser investigado.",
+ "Nem todo incidente é defeito: pode ser erro no caso de teste, no ambiente ou nos dados. Por isso se fala em incidente primeiro; a análise confirma se é defeito no software."),
+ce(1,104,M11,"O envolvimento do usuário é irrelevante para os resultados dos testes e para o esforço da equipe.",1,
+ "Errado. A participação do usuário influencia a qualidade dos casos, a validação e o esforço (por exemplo, no teste de aceitação).",
+ "Verificação compara o software com a especificação; validação compara com a necessidade real do usuário. Sem o usuário, a validação fica fraca: o sistema pode estar certo segundo o documento e errado para quem o usa."),
+ce(1,105,M11,"A quantidade de horas de teste depende do tamanho estimado do sistema, que pode ser obtido por análise de pontos de função.",0,
+ "Certo. Estimativas de esforço de teste costumam partir do tamanho funcional, e a APF é uma técnica usual para medi-lo.",
+ "Estimativa de teste: técnicas baseadas em tamanho (pontos de função, pontos de teste), em analogia com projetos anteriores, em percentual do esforço de desenvolvimento ou por decomposição de tarefas. Fatores como ambiente, ferramentas e experiência da equipe ajustam o valor."),
+
+// ===== REGIÃO 2: NÍVEIS E TIPOS =====
+Object.assign({a:2,f:"afirmações",q:"No teste de aplicações web, avalie as afirmações a seguir.",
+ items:["O teste de interface verifica aspectos estéticos e erros de navegação e de exibição.",
+  "O teste de usabilidade avalia com que eficácia o usuário consegue interagir com a aplicação.",
+  "O primeiro passo do teste de compatibilidade é definir as configurações típicas do lado cliente."],
+ o:I3,c:4,
+ e:"Gabarito oficial: I, II e III. As três descrevem corretamente esses tipos de teste.",
+ rv:"Tipos de teste comuns em aplicações web: interface (navegação, exibição, aparência), usabilidade (facilidade de aprender, memorizar e usar), compatibilidade (navegadores, sistemas, dispositivos), desempenho, segurança e conteúdo."},EN(2014,28)),
+Object.assign({a:2,f:"afirmações",ctx:"Defeitos de software podem vir de requisitos ambíguos ou mal interpretados pela equipe. Por isso, verificação, validação e teste são essenciais para avaliar a qualidade do software.",
+ q:"Avalie as afirmações a seguir.",
+ items:["O teste funcional verifica se o software executa as funções especificadas nos requisitos.",
+  "O teste de desempenho valida a conformidade com a especificação do processo de desenvolvimento.",
+  "O teste de aceitação é realizado pelo cliente para confirmar que o que foi construído corresponde ao que foi pedido.",
+  "O teste de instalação é sempre realizado no local escolhido pelo cliente.",
+  "As técnicas de V&V buscam garantir que o sistema em desenvolvimento seja adequado ao seu propósito."],
+ o:["I e II, apenas.","I, III e V, apenas.","II, III e IV, apenas.","II, IV e V, apenas.","I, III, IV e V, apenas."],c:1,
+ e:"Gabarito oficial: I, III e V. II é falsa: desempenho mede tempo de resposta e vazão da aplicação, não o processo. IV é falsa: a instalação pode ser testada em réplica do ambiente de produção.",
+ rv:"Funcional (caixa-preta) compara saídas com a especificação. Aceitação é validação, conduzida pelo cliente ou usuário. Verificação pergunta se o produto segue a especificação; validação pergunta se atende à necessidade do usuário."},EN(2017,23)),
+ce(2,64,M11,"Os testes de unidade são aplicados a componentes combinados para verificar seu funcionamento conjunto e os requisitos do software como um todo.",1,
+ "Errado. O teste de unidade avalia o menor componente isoladamente. Componentes combinados são alvo do teste de integração; o software como um todo, do teste de sistema.",
+ "Níveis de teste: unidade (função ou classe isolada, dependências substituídas por dublês), integração (interfaces entre módulos; estratégias big-bang, top-down com stubs, bottom-up com drivers), sistema (produto inteiro contra os requisitos) e aceitação (validação pelo usuário)."),
+ce(2,67,M11,"Após um software modificado ser retestado nas partes alteradas, o teste de regressão também retesta as partes não modificadas.",0,
+ "Certo. Regressão verifica se a mudança quebrou algo que já funcionava, inclusive em partes que não foram alteradas.",
+ "Reteste (teste de confirmação) repete o caso que falhou para confirmar a correção. Regressão reexecuta os demais casos para detectar efeitos colaterais. Como se repete a cada mudança, é a principal candidata à automação."),
+ce(2,66,M11,"Os testes de interoperabilidade são os indicados para verificar a capacidade de proteção do software.",1,
+ "Errado. Interoperabilidade avalia a capacidade de interagir com outros sistemas. Proteção é alvo do teste de segurança.",
+ "Na ISO/IEC 9126, interoperabilidade e segurança de acesso eram subcaracterísticas de funcionalidade, mas com objetivos diferentes: trocar dados com outros sistemas versus impedir acesso não autorizado. Na ISO/IEC 25010, segurança virou característica própria."),
+ce(2,63,M15,"Os testes não funcionais devem ocorrer apenas depois dos funcionais, pois problemas em requisitos não funcionais teriam pouco impacto.",1,
+ "Errado. Requisitos não funcionais (desempenho, segurança, usabilidade) podem ter alto impacto e devem ser considerados desde cedo.",
+ "Testes não funcionais avaliam como o sistema funciona: desempenho (carga, estresse), usabilidade, confiabilidade, portabilidade, manutenibilidade. Falhas nesses atributos podem inviabilizar um sistema que está funcionalmente correto."),
+ce(2,64,M15,"A segurança do software é tratada nos testes não funcionais.",1,
+ "Errado, segundo o gabarito oficial. A banca seguiu a classificação da ISO/IEC 9126 e do programa ISTQB da época, em que segurança é subcaracterística de funcionalidade e o teste de segurança aparece como tipo de teste funcional.",
+ "Classificações mudam com as normas. Na ISO/IEC 9126 (e no syllabus ISTQB 2011), segurança fazia parte de funcionalidade. Na ISO/IEC 25010, segurança passou a ser uma característica de qualidade própria. Em prova, observe a referência que a banca costuma adotar."),
+ce(2,62,M15,"Os testes de desempenho devem começar cedo, ainda durante a arquitetura e a implementação, para localizar as partes mais lentas de uma funcionalidade.",0,
+ "Certo. Antecipar a análise de desempenho permite corrigir gargalos quando ainda é barato.",
+ "Princípio do teste antecipado (shift left): quanto mais cedo o defeito é encontrado, menor o custo. Para desempenho, isso inclui modelagem, testes de componentes críticos e medições durante a implementação, antes do teste de carga do sistema completo."),
+ce(2,73,M15,"Em um sistema com lentidão, testes de integração podem ajudar a identificar se a origem do problema de desempenho está no acesso ao banco de dados.",0,
+ "Certo. O teste de integração exercita a comunicação entre componentes, como aplicação e banco, e ajuda a isolar onde o problema ocorre.",
+ "Defeitos típicos de integração moram na conversa entre partes: contratos, formatos, unidades trocadas, timeouts, consultas ineficientes entre a aplicação e o banco. Testar as integrações separadamente facilita localizar a origem de uma falha."),
+ce(2,75,M15,"Se as páginas de um sistema falham em alguns navegadores, não é necessário teste semântico, pois a conformidade com os padrões do W3C não é alvo de testes.",1,
+ "Errado. A conformidade com padrões web (HTML, CSS, acessibilidade) pode e deve ser verificada, e falhas em navegadores são justamente um motivo para isso.",
+ "Teste de compatibilidade verifica o funcionamento em diferentes navegadores, sistemas e dispositivos. Validadores de padrões W3C e testes de acessibilidade ajudam a prevenir diferenças de renderização e barreiras de uso."),
+ce(2,92,M11,"Ao testar uma aplicação web, um usuário percebe que o login é lento e que tem dificuldade para localizar os tópicos de interesse. Esses problemas são classificados, respectivamente, como defeitos de desempenho e de usabilidade.",0,
+ "Certo. Lentidão é atributo de desempenho; dificuldade de encontrar informação é atributo de usabilidade.",
+ "Desempenho: tempo de resposta, vazão, uso de recursos. Usabilidade: facilidade de aprender, eficiência de uso, facilidade de memorizar, poucos erros e satisfação. Ambos são requisitos não funcionais e precisam de critérios mensuráveis."),
+
+// ===== REGIÃO 3: TÉCNICAS E FERRAMENTAS =====
+Object.assign({a:3,f:"afirmações",q:"Sobre o teste de caixa-branca pelo caminho básico, avalie as afirmações.",
+ items:["Em um conjunto de caminhos independentes, cada caminho introduz ao menos uma aresta ainda não percorrida pelos demais.",
+  "A complexidade ciclomática fornece o número de caminhos independentes do programa a serem testados.",
+  "O teste de caminhos independentes se aplica a programas procedurais, mas não a programas orientados a objetos."],
+ o:I3,c:2,
+ e:"Gabarito oficial: I e II. III é falsa: a complexidade ciclomática vale para qualquer código com fluxo de controle, inclusive métodos de classes. (Na prova original, a afirmação I se referia a caminhos listados a partir de um fluxograma.)",
+ rv:"Complexidade ciclomática V(G) = E − N + 2 (arestas − nós + 2) = número de decisões simples + 1. Ela dá o número de caminhos linearmente independentes, limite superior de casos para o teste do caminho básico (McCabe)."},EN(2014,31)),
+Object.assign({a:3,f:"afirmações",q:"Sobre técnicas e níveis de teste, avalie as afirmações.",
+ items:["No teste de caixa-branca, o analista não acessa o código nem conhece a estrutura interna; é chamado de funcional por se basear nos requisitos.",
+  "No teste de caixa-preta, o analista acessa o código e conhece a estrutura interna, podendo escolher partes específicas; é chamado de estrutural.",
+  "O teste de unidade examina a menor parte do projeto, procurando falhas causadas por defeitos de lógica e de implementação em cada módulo, isoladamente.",
+  "O teste de estresse avalia o sistema em condições anormais, como cargas extremas, pouca memória e serviços ou hardware indisponíveis."],
+ o:["II e III, apenas.","I e II, apenas.","III e IV, apenas.","II, III e IV, apenas.","I, II e III, apenas."],c:2,
+ src:"IF-SC · concurso 2014 · Professor de Informática",url:URL.ifsc,
+ e:"Gabarito: III e IV. I e II trocam as definições: sem acesso ao código é caixa-preta (funcional); com acesso à estrutura interna é caixa-branca (estrutural).",
+ rv:"Caixa-preta (funcional): casos derivados da especificação, sem olhar o código. Caixa-branca (estrutural): casos derivados da implementação, medindo cobertura de comandos, ramos e caminhos. Estresse leva o sistema além dos limites para achar o ponto de ruptura."}),
+Object.assign({a:3,f:"múltipla escolha",q:"Sobre teste de software, assinale a alternativa correta.",
+ o:["O teste de caixa-preta examina detalhadamente os procedimentos, cobrindo todos os caminhos lógicos possíveis.",
+  "No teste de caixa-branca, o analista não acessa o código-fonte e é chamado de teste funcional.",
+  "No teste de caixa-cinza, o analista não acessa o código e o teste é chamado de teste de requisitos não funcionais.",
+  "O teste de caixa-branca envolve exame detalhado dos procedimentos, cobrindo os caminhos lógicos possíveis.",
+  "O teste de caixa-cinza, também chamado estrutural, dá ao analista acesso total à estrutura interna."],c:3,
+ src:"IESES · Bahiagás 2016 · Técnico de Processos Tecnológicos (TI)",url:URL.ieses,
+ e:"Gabarito: D. Examinar procedimentos e caminhos lógicos é caixa-branca. A, B, C e E trocam conceitos (estrutural é sinônimo de caixa-branca, não de caixa-cinza).",
+ rv:"Caixa-cinza combina as duas visões: o testador conhece parte da estrutura interna (por exemplo, banco de dados ou arquitetura), mas projeta os testes pela interface externa. Estrutural é sinônimo de caixa-branca; funcional, de caixa-preta."}),
+ce(3,63,M11,"O teste de caixa-preta verifica se os requisitos do software são atendidos sem examinar o código nem a lógica interna.",0,
+ "Certo. É a definição de teste funcional (caixa-preta).",
+ "Técnicas de caixa-preta: particionamento de equivalência (um representante por classe), análise de valor limite (fronteiras e vizinhos), tabela de decisão (combinações de condições), transição de estados e grafo causa-efeito. Podem ser aplicadas antes de existir código."),
+ce(3,65,M15,"Os testes baseados na arquitetura e no código-fonte são de caixa-branca e incluem validar decisões e as relações entre as estruturas do software.",0,
+ "Certo. Teste estrutural usa o conhecimento interno: decisões, caminhos, fluxo de dados e interações entre componentes.",
+ "Critérios estruturais: todos-os-nós (comandos), todas-as-arestas (ramos, cada decisão verdadeira e falsa), condição/decisão, MC/DC, fluxo de dados (definição → uso) e todos-os-caminhos. Cobrir arestas garante cobrir nós, não o inverso."),
+ce(3,67,M15,"Testes elaborados a partir de regras de negócio e casos de uso seguem uma abordagem baseada em experiência.",1,
+ "Errado. Testes derivados de regras de negócio e casos de uso são baseados em especificação (caixa-preta).",
+ "Baseadas em experiência são as técnicas que dependem do conhecimento do testador: teste exploratório, suposição de erro (error guessing) e checklists. Teste de caso de uso e tabela de decisão derivam da especificação."),
+ce(3,68,M15,"A análise de valor limite é uma técnica de caixa-preta indicada para problemas que envolvem valores extremos.",0,
+ "Certo. Ela testa as fronteiras das classes de equivalência, onde se concentram defeitos.",
+ "Para cada fronteira B, testam-se B−1, B e B+1 (ou o menor incremento do domínio). Defeitos típicos: trocar < por <=, erro off-by-one, limite mal definido no requisito. Costuma ser usada junto com o particionamento de equivalência."),
+ce(3,61,M15,"Os testes baseados na arquitetura podem ser feitos manualmente ou de forma automatizada, em qualquer nível de teste.",0,
+ "Certo. A técnica não restringe a forma de execução nem o nível.",
+ "Técnica (de onde vêm os casos), nível (unidade, integração, sistema, aceitação) e forma de execução (manual ou automatizada) são dimensões independentes. Uma técnica estrutural pode ser usada na unidade ou na integração, manual ou automatizada."),
+ce(3,77,M11,"A ferramenta Selenium se dedica a medições estáticas de projeto e de código e não automatiza testes funcionais sem o apoio de outras ferramentas.",1,
+ "Errado. O Selenium automatiza testes funcionais em navegadores, simulando as ações do usuário na interface web.",
+ "Ferramentas comuns: Selenium e Cypress (testes funcionais de interface web), JUnit, pytest e NUnit (testes de unidade), JMeter e Gatling (desempenho e carga), SonarQube (análise estática), Mantis, Jira e Bugzilla (gestão de defeitos)."),
+ce(3,73,M11,"O JMeter é um software livre para automação de testes de desempenho, carga e estresse em servidores web e bancos de dados.",0,
+ "Certo. O Apache JMeter é usado principalmente para testes de desempenho e carga.",
+ "Teste de carga mede o comportamento sob a demanda esperada; estresse ultrapassa os limites para encontrar o ponto de ruptura; volume usa grandes quantidades de dados. Ferramentas como o JMeter simulam muitos usuários simultâneos."),
+ce(3,83,M15,"O JUnit é uma biblioteca de apoio a testes automatizados composta por um conjunto de classes em C#.",1,
+ "Errado. O JUnit é um framework de testes de unidade para Java. O equivalente em C#/.NET é o NUnit (ou xUnit.net).",
+ "A família xUnit tem versões para várias linguagens: JUnit (Java), NUnit e xUnit.net (.NET), unittest e pytest (Python), PHPUnit (PHP). Elas organizam casos de teste, asserções, preparação (setup) e limpeza (teardown)."),
+ce(3,102,M11,"Um gerente comprou uma ferramenta de automação de testes para aumentar a produtividade. A decisão é inadequada, pois esse tipo de ferramenta não documenta casos de teste nem repete testes já executados.",1,
+ "Errado. Repetir testes já executados é exatamente o ponto forte da automação, e muitas ferramentas também registram e documentam os casos.",
+ "Automação compensa sobretudo em testes repetitivos, como a regressão. Tem custo de criação e manutenção dos scripts e não substitui o teste exploratório nem o julgamento humano em usabilidade."),
+
+// ===== REGIÃO 4: QUALIDADE, REQUISITOS E CONFIGURAÇÃO =====
+Object.assign({a:4,f:"afirmações",q:"Sobre garantia da qualidade de software, avalie as afirmações.",
+ items:["A verificação e a validação buscam dar confiança de que o sistema é adequado ao seu propósito.",
+  "A gerência de configuração fornece pontos de controle sobre os artefatos produzidos.",
+  "A gestão de mudanças documenta os defeitos apenas depois que uma nova versão é gerada.",
+  "A equipe de garantia da qualidade verifica se os testes cobrem os requisitos e mantém registros dos testes.",
+  "A revisão de software tem como objetivo armazenar os documentos em um repositório central."],
+ o:["I e III, apenas.","I, II e IV, apenas.","II, III e V, apenas.","III, IV e V, apenas.","I, II, IV e V, apenas."],c:1,
+ e:"Gabarito oficial: I, II e IV. III é falsa: a gestão de mudanças é contínua ao longo do ciclo de vida. V é falsa: revisões buscam identificar problemas e melhorias.",
+ rv:"SQA reúne atividades planejadas para dar confiança na qualidade do processo e do produto: V&V, revisões e auditorias, gerência de configuração, gestão de mudanças, padrões e registros de teste."},EN(2014,33)),
+Object.assign({a:4,f:"afirmações",q:"Sobre gerência de configuração de software, avalie as afirmações.",
+ items:["A auditoria de software verifica apenas se a baseline ou os requisitos do sistema foram atendidos.",
+  "A baseline é o ponto de referência para o controle de mudanças.",
+  "Um item de configuração é uma unidade do software que precisa ser gerenciada."],
+ o:I3,c:3,
+ e:"Gabarito oficial: II e III. I é falsa: a auditoria também verifica se os processos e padrões de engenharia foram seguidos.",
+ rv:"Gerência de configuração: identificar itens de configuração, estabelecer baselines (versões aprovadas de referência), controlar mudanças, registrar o estado (contabilização) e auditar a configuração."},EN(2014,30)),
+Object.assign({a:4,f:"afirmações",ctx:"Um desenvolvedor recém-formado entra em um projeto e recebe explicações sobre a gerência de configuração usada pela empresa.",
+ q:"Avalie as afirmações a seguir.",
+ items:["Para acessar a base de desenvolvimento, ele deve fazer checkout dos arquivos do projeto armazenados no servidor.",
+  "Quando vários desenvolvedores alteram o mesmo documento, o commit pode exigir uma operação de tag (release) para resolver o conflito entre a versão local e a do repositório.",
+  "Ao desenvolver um novo caso de uso que altera muitos arquivos, recomenda-se criar um branch.",
+  "A versão estável é o ramo principal de desenvolvimento, que vai do início do projeto até o momento atual."],
+ o:["I e II, apenas.","I e III, apenas.","II e IV, apenas.","I, III e IV, apenas.","II, III e IV, apenas."],c:1,
+ e:"Gabarito oficial: I e III. II é falsa: conflitos se resolvem com merge; tag apenas marca uma versão. IV é falsa: a versão estável costuma ficar em ramo separado, com código testado e entregue.",
+ rv:"Operações de controle de versão: checkout/clone (obter), commit (registrar), branch (linha paralela de desenvolvimento), merge (unir alterações e resolver conflitos), tag (marcar uma versão, como uma release)."},EN(2017,22)),
+Object.assign({a:4,f:"afirmações",ctx:"Requisitos funcionais e não funcionais (de qualidade) definem características da interface de um sistema.",
+ q:"Sobre os requisitos não funcionais, avalie as afirmações.",
+ items:["Devem ser levantados depois dos requisitos funcionais, pois estes é que definem a interface.",
+  "Sempre se concretizam por meio de requisitos funcionais, já que o usuário só manipula funções levantadas.",
+  "Podem complementar os requisitos funcionais."],
+ o:["II, apenas.","III, apenas.","I e II, apenas.","I e III, apenas.","I, II e III."],c:1,
+ e:"Gabarito oficial: III, apenas. Requisitos não funcionais não são levantados só depois dos funcionais nem dependem deles; são diferentes e os complementam.",
+ rv:"Requisitos funcionais dizem o que o sistema faz. Não funcionais dizem como: desempenho, usabilidade, segurança, confiabilidade, portabilidade. Precisam ser mensuráveis para serem testáveis (por exemplo, responder em até 2 s para 95% das requisições)."},EN(2014,19)),
+Object.assign({a:4,f:"múltipla escolha",q:"Requisitos funcionais descrevem o comportamento do sistema; os não funcionais tratam de outros aspectos do software. Qual alternativa traz apenas exemplos de requisitos não funcionais?",
+ o:["Segurança, desempenho, estresse e sistema.","Usabilidade, segurança, aceitação e confiabilidade.","Usabilidade, segurança, desempenho e confiabilidade.","Segurança, aceitação, testabilidade e confidencialidade.","Usabilidade, confidencialidade, aceitação e confiabilidade."],c:2,
+ e:"Gabarito oficial: C. Estresse, sistema e aceitação são tipos ou níveis de teste, não requisitos.",
+ rv:"Cuidado com a confusão entre requisito e teste: “teste de estresse” e “teste de aceitação” verificam requisitos; não são requisitos. Características de qualidade da ISO/IEC 25010 ajudam a classificar requisitos não funcionais."},EN(2014,25)),
+Object.assign({a:4,f:"afirmações",ctx:"Usabilidade é a facilidade ou dificuldade de uso de um sistema. Três princípios de projeto de interface são: deixar o usuário no comando, reduzir a carga de memória do usuário e tornar a interface consistente.",
+ q:"Avalie as afirmações.",
+ items:["Permitir desfazer qualquer ação atende ao princípio de deixar o usuário no comando.",
+  "Um sistema de pagamento que mostra a imagem de um cartão de crédito para orientar o preenchimento atende ao princípio de reduzir a carga de memória.",
+  "Aplicações que seguem as mesmas regras de projeto de forma padronizada atendem ao princípio de consistência."],
+ o:["I, apenas.","II, apenas.","I e III, apenas.","II e III, apenas.","I, II e III."],c:4,
+ e:"Gabarito oficial: I, II e III.",
+ rv:"Desfazer dá controle e reduz a apreensão; metáforas visuais evitam memorizar comandos; padrões consistentes evitam desorientação. Testes de usabilidade verificam esses princípios com usuários reais executando tarefas."},EN(2014,32)),
+Object.assign({a:4,f:"asserção-razão",q:"Avalie as asserções a seguir e a relação proposta entre elas.",
+ ar:["O CMMI oferece diretrizes para melhorar processos e capacidades organizacionais ao longo do ciclo de vida de produtos e serviços, da concepção à manutenção.",
+  "Empresas brasileiras vêm adotando programas de qualidade baseados no CMMI, modelo voltado a pequenas e médias empresas, embora também aplicável a grandes organizações."],
+ o:AR,c:2,
+ e:"Gabarito oficial: C. I é verdadeira. II é falsa: o CMMI não é voltado especificamente a pequenas e médias empresas e é muito usado por grandes organizações.",
+ rv:"Modelos de maturidade de processo: CMMI (níveis 1 a 5) e o brasileiro MPS.BR (níveis G a A), pensado também para tornar a melhoria de processo acessível a pequenas e médias empresas."},EN(2017,13)),
+ce(4,94,M15,"A norma IEEE 829 descreve diretrizes para as atividades de teste de um produto de software.",1,
+ "Errado, segundo o gabarito oficial. A IEEE 829 trata da documentação de teste (os documentos e seu conteúdo), e não das atividades de teste em si.",
+ "A IEEE 829 define documentos como plano de teste, especificações de projeto, de casos e de procedimentos, log, relatório de incidente e relatório de resumo. Hoje ela foi substituída pela série ISO/IEC/IEEE 29119, que cobre processo, documentação e técnicas."),
+ce(4,96,M15,"A NBR ISO/IEC 9126 descreve um modelo de qualidade de produto dividido em quatro partes, com características e subcaracterísticas a serem medidas.",0,
+ "Certo. As partes são: modelo de qualidade, métricas externas, métricas internas e métricas de qualidade em uso.",
+ "Características da ISO/IEC 9126: funcionalidade, confiabilidade, usabilidade, eficiência, manutenibilidade e portabilidade. A sucessora, ISO/IEC 25010 (família SQuaRE), acrescentou segurança e compatibilidade como características próprias.")
+];
+
+// ---------- PERSONAGENS (arte original em SVG; pés em y=0) ----------
+const OL = 'stroke="#2a261c" stroke-width="1.6" stroke-linejoin="round"';
+const CHARS = [
+ {id:"lupa", nome:"Inspetora Lupa", frase:"Lê cada requisito duas vezes.", art:`
+  <rect x="-7" y="-13" width="5" height="13" rx="2" fill="#3b3f5c" ${OL}/><rect x="2" y="-13" width="5" height="13" rx="2" fill="#3b3f5c" ${OL}/>
+  <path d="M-11 -12 L-9 -30 Q0 -34 9 -30 L11 -12 Z" fill="#e8a33d" ${OL}/>
+  <line x1="0" y1="-31" x2="0" y2="-13" stroke="#2a261c" stroke-width="1.2"/>
+  <circle cx="0" cy="-39" r="8" fill="#c58b5c" ${OL}/>
+  <path d="M-8.5 -40 Q-6 -49 0 -48 Q7 -49 8.5 -40 Q3 -45 -8.5 -40Z" fill="#3a2418"/><circle cx="0" cy="-49" r="3.6" fill="#3a2418"/>
+  <circle cx="-3" cy="-38.5" r="1.2" fill="#2a261c"/><circle cx="3" cy="-38.5" r="1.2" fill="#2a261c"/>
+  <path d="M-2.5 -35 Q0 -33.5 2.5 -35" fill="none" stroke="#2a261c" stroke-width="1.1" stroke-linecap="round"/>
+  <line x1="9" y1="-22" x2="15" y2="-29" stroke="#2a261c" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="17.5" cy="-32" r="5.5" fill="#bfe3f2" stroke="#2a261c" stroke-width="2"/>`},
+ {id:"assert", nome:"Robô Assert", frase:"Só confia no que passou no teste.", art:`
+  <rect x="-8" y="-12" width="5" height="12" rx="1.5" fill="#5d6b7a" ${OL}/><rect x="3" y="-12" width="5" height="12" rx="1.5" fill="#5d6b7a" ${OL}/>
+  <rect x="-11" y="-29" width="22" height="18" rx="3" fill="#9fb3c6" ${OL}/>
+  <circle cx="-5" cy="-20" r="2" fill="#f2bb4a"/><circle cx="1" cy="-20" r="2" fill="#f25c54"/><circle cx="7" cy="-20" r="2" fill="#7ee07a"/>
+  <line x1="-11" y1="-25" x2="-16" y2="-17" stroke="#2a261c" stroke-width="2.4" stroke-linecap="round"/><line x1="11" y1="-25" x2="16" y2="-17" stroke="#2a261c" stroke-width="2.4" stroke-linecap="round"/>
+  <rect x="-10" y="-45" width="20" height="15" rx="4" fill="#2d3a4a" ${OL}/>
+  <path d="M-4.5 -37.5 l3 3 l6.5 -6.5" fill="none" stroke="#7ee07a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="0" y1="-45" x2="0" y2="-51" stroke="#2a261c" stroke-width="1.6"/><circle cx="0" cy="-52.5" r="2.4" fill="#f25c54" ${OL}/>`},
+ {id:"oraculo", nome:"Coruja Oráculo", frase:"Sabe o resultado esperado antes de rodar.", art:`
+  <path d="M-12 -34 L-9 -44 L-4 -36 Z" fill="#7d5434" ${OL}/><path d="M12 -34 L9 -44 L4 -36 Z" fill="#7d5434" ${OL}/>
+  <ellipse cx="0" cy="-20" rx="14" ry="19" fill="#9a6b47" ${OL}/>
+  <ellipse cx="0" cy="-14" rx="8.5" ry="11" fill="#ead6b4"/>
+  <path d="M-6 -16 q2 2 4 0 M2 -16 q2 2 4 0 M-4 -10 q2 2 4 0" fill="none" stroke="#b08a5f" stroke-width="1"/>
+  <circle cx="-5.5" cy="-29" r="5.5" fill="#fff" ${OL}/><circle cx="5.5" cy="-29" r="5.5" fill="#fff" ${OL}/>
+  <circle cx="-5" cy="-28.5" r="2.4" fill="#2a261c"/><circle cx="5" cy="-28.5" r="2.4" fill="#2a261c"/>
+  <path d="M-2 -24 L0 -20 L2 -24 Z" fill="#e8a33d" ${OL}/>
+  <path d="M-6 -1 l-2 1 M-6 -1 l0 1.5 M6 -1 l2 1 M6 -1 l0 1.5" stroke="#e8a33d" stroke-width="2" stroke-linecap="round"/>`},
+ {id:"tatu", nome:"Tatu Mutante", frase:"Enrola o código e vê se a suíte percebe.", art:`
+  <path d="M-15 -11 q-6 2 -7 7" fill="none" stroke="#2a261c" stroke-width="2.2" stroke-linecap="round"/>
+  <rect x="-10" y="-6" width="4" height="6" rx="1.5" fill="#a77b52" ${OL}/><rect x="6" y="-6" width="4" height="6" rx="1.5" fill="#a77b52" ${OL}/>
+  <path d="M-16 -6 Q-16 -30 1 -30 Q16 -30 16 -6 Z" fill="#c4935f" ${OL}/>
+  <path d="M-8 -28 Q-11 -16 -10 -6 M0 -30 Q-1 -18 0 -6 M8 -28 Q10 -16 9 -6" fill="none" stroke="#8a6036" stroke-width="1.6"/>
+  <ellipse cx="18" cy="-10" rx="7" ry="5.5" fill="#dcb68c" ${OL}/>
+  <path d="M15 -15 L13 -21 L18 -16 Z" fill="#dcb68c" ${OL}/>
+  <circle cx="20" cy="-11.5" r="1.3" fill="#2a261c"/><circle cx="24.5" cy="-9.5" r="1" fill="#2a261c"/>`}
+];
+const avatar = (c,vb="-26 -58 52 62") => `<svg viewBox="${vb}" aria-hidden="true">${CHARS.find(x=>x.id===c).art}</svg>`;
+
+const REGIOES = {
+ 1:{nome:"Vale da Verificação", cor:"var(--r1)"},
+ 2:{nome:"Vila dos Níveis", cor:"var(--r2)"},
+ 3:{nome:"Floresta das Técnicas", cor:"var(--r3)"},
+ 4:{nome:"Fortaleza da Qualidade", cor:"var(--r4)"}
+};
+
+// ---------- ESTADO ----------
+const app = document.getElementById("app"), bar = document.getElementById("bar");
+const KEY="trilha-provas-v1", CERT="trilha-provas-cert";
+const store = {
+  get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},
+  del(k){try{localStorage.removeItem(k)}catch(e){}}
+};
+const esc = s => String(s).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+const shuffle = a => {a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const ROM=["I","II","III","IV","V"], LET="ABCDE";
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let S = null; // {name, char, mode, ids[], res[], pts, streak, walkFrom}
+
+function save(){ if(S) store.set(KEY,S) }
+function buildIds(mode, only){
+  if(only) return only;
+  const ids=[];
+  [1,2,3,4].forEach(a=>{
+    let g=shuffle(Q.map((q,i)=>i).filter(i=>Q[i].a===a));
+    if(mode==="rapida") g=g.slice(0,5);
+    ids.push(...g);
+  });
+  return ids;
+}
+
+// ---------- TELA INICIAL ----------
+function home(msg){
+  bar.hidden=true;
+  const saved=store.get(KEY), cert=store.get(CERT);
+  const prev = saved && saved.res.length<saved.ids.length ? saved : null;
+  app.innerHTML=`
+  <header class="title">
+    <div class="eyebrow">Teste e qualidade de software · Questões oficiais</div>
+    <h1>Trilha das <em>Provas</em></h1>
+    <p>Escolha um personagem e atravesse quatro regiões. Cada parada é uma questão de prova oficial do Enade ou de concurso público, com gabarito oficial e revisão do conteúdo. No fim da trilha, você recebe seu certificado.</p>
+  </header>
+  ${prev?`<div class="resume">${avatar(prev.char)}<div><b>${esc(prev.name)}</b> parou no desafio ${prev.res.length+1} de ${prev.ids.length}.<br><span class="note">O progresso fica salvo neste navegador.</span></div><button class="btn" id="cont">Continuar</button></div>`:""}
+  ${cert?`<div class="actions"><button class="btn alt" id="vercert">Ver meu último certificado</button></div>`:""}
+  <section class="step">
+    <h2>1. Seu nome no certificado</h2>
+    <div class="namebox"><input id="nome" maxlength="60" autocomplete="name" placeholder="Ex.: Maria Eduarda Silva" value="${esc(prev?.name||cert?.name||"")}"></div>
+  </section>
+  <section class="step">
+    <h2>2. Escolha seu personagem</h2>
+    <div class="chars" role="radiogroup">
+      ${CHARS.map((c,k)=>`<label class="char"><input type="radio" name="char" id="char-${c.id}" value="${c.id}" ${k===0?"checked":""}>${avatar(c.id)}<b>${c.nome}</b><span>${c.frase}</span></label>`).join("")}
+    </div>
+  </section>
+  <section class="step">
+    <h2>3. Tamanho da trilha</h2>
+    <div class="modes">
+      <label class="mode"><input type="radio" name="mode" id="mode-rapida" value="rapida" checked><b>Trilha rápida</b><span>20 desafios, 5 por região</span></label>
+      <label class="mode"><input type="radio" name="mode" id="mode-completa" value="completa"><b>Trilha completa</b><span>Todos os ${Q.length} desafios</span></label>
+    </div>
+  </section>
+  ${msg?`<p class="err" role="alert">${esc(msg)}</p>`:""}
+  <button class="btn" id="go">${prev?"Começar uma nova jornada":"Começar a jornada"}</button>
+  <p class="note">Cada desafio corresponde a uma questão oficial identificada (Enade ou concurso), com o mesmo conteúdo e o gabarito oficial. O texto foi reescrito, sem alterar o que é cobrado, e cada questão traz o link para a prova original.</p>`;
+  if(prev) document.getElementById("cont").onclick=()=>{S=prev;showMap()};
+  if(cert) document.getElementById("vercert").onclick=()=>certificate(cert);
+  document.getElementById("go").onclick=()=>{
+    const name=document.getElementById("nome").value.trim();
+    if(!name) return home("Escreva seu nome para ele aparecer no certificado.");
+    const char=app.querySelector('input[name=char]:checked').value;
+    const mode=app.querySelector('input[name=mode]:checked').value;
+    S={name,char,mode,ids:buildIds(mode),res:[],pts:0,streak:0,walkFrom:null};
+    save(); showMap();
+  };
+  window.scrollTo(0,0);
+}
+
+// ---------- MAPA ----------
+const W=360, STEP=96;
+const pos = t => ({x: W/2 + 108*Math.sin(t*1.05 + .4), y: 96 + t*STEP});
+function drawMap(){
+  const N=S.ids.length, H=pos(N+1).y+120;
+  const qs=S.ids.map(i=>Q[i]);
+  // trilha
+  let d=""; for(let t=0;t<=N+1+1e-9;t+=0.05){const p=pos(t);d+=(d?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)}
+  // regiões
+  const bounds=[]; let cur=null;
+  qs.forEach((q,k)=>{ if(!cur||cur.a!==q.a){cur={a:q.a,first:k+1,last:k+1};bounds.push(cur)} else cur.last=k+1 });
+  let bands="";
+  bounds.forEach((b,j)=>{
+    const top = j===0?0:(pos(bounds[j-1].last).y+pos(b.first).y)/2;
+    const bot = j===bounds.length-1?H:(pos(b.last).y+pos(bounds[j+1].first).y)/2;
+    bands+=`<rect x="0" y="${top}" width="${W}" height="${bot-top}" fill="${REGIOES[b.a].cor}"/>`;
+    const ly = j===0? 34 : top+30;
+    bands+=`<text class="rlabel" x="16" y="${ly}">${REGIOES[b.a].nome}</text><text class="rsub" x="16" y="${ly+14}">${esc(EIXOS[b.a].nome.toUpperCase())}</text>`;
+  });
+  // decoração: do lado oposto à curva
+  let deco="";
+  for(let k=1;k<=N;k++){
+    const p=pos(k+.5), a=qs[Math.min(k,N-1)].a, side = p.x>W/2? -1:1;
+    const x = W/2 + side*(118 + (k%3)*12), y=p.y+ (k%2?6:-8);
+    if(x<20||x>W-20) continue;
+    if(a===1) deco+=`<circle cx="${x}" cy="${y}" r="11" fill="var(--deco)"/><circle cx="${x+10}" cy="${y+4}" r="8" fill="var(--deco2)"/>`;
+    else if(a===2) deco+=`<rect x="${x-10}" y="${y-6}" width="20" height="16" fill="var(--surface)" stroke="var(--trail-edge)" stroke-width="1.5"/><path d="M${x-13} ${y-5} L${x} ${y-17} L${x+13} ${y-5}Z" fill="var(--roof)"/><rect x="${x-3}" y="${y+2}" width="6" height="8" fill="var(--trail-edge)"/>`;
+    else if(a===3) deco+=`<path d="M${x} ${y-22} L${x+12} ${y+4} L${x-12} ${y+4}Z" fill="var(--deco2)"/><path d="M${x+14} ${y-12} L${x+23} ${y+8} L${x+5} ${y+8}Z" fill="var(--deco)"/><rect x="${x-2}" y="${y+4}" width="4" height="6" fill="var(--trail-edge)"/>`;
+    else deco+=`<rect x="${x-9}" y="${y-18}" width="18" height="28" fill="var(--lock)" stroke="var(--trail-edge)" stroke-width="1.5"/><path d="M${x-9} ${y-18} v-5 h5 v5 h3 v-5 h2 v5 h3 v-5 h5 v5" fill="var(--lock)" stroke="var(--trail-edge)" stroke-width="1.5"/><rect x="${x-3}" y="${y-8}" width="6" height="8" rx="3" fill="var(--trail-edge)"/>`;
+  }
+  // início e chegada
+  const p0=pos(0), pf=pos(N+1);
+  const start=`<g><line x1="${p0.x-22}" y1="${p0.y+6}" x2="${p0.x-22}" y2="${p0.y-28}" stroke="var(--ink)" stroke-width="2"/><path d="M${p0.x-22} ${p0.y-28} l16 5 l-16 5z" fill="var(--bad)"/><circle cx="${p0.x}" cy="${p0.y}" r="13" fill="var(--node)" stroke="var(--trail-edge)" stroke-width="3"/><text class="rsub" x="${p0.x}" y="${p0.y+30}" text-anchor="middle">INÍCIO</text></g>`;
+  const done = S.res.length===N;
+  const finish=`<g class="node ${done?"next":""}">
+    <circle class="ring" cx="${pf.x}" cy="${pf.y-6}" r="34" ${done?"":'style="display:none"'}/>
+    <rect x="${pf.x-26}" y="${pf.y-30}" width="52" height="40" rx="4" fill="var(--surface)" stroke="var(--gold)" stroke-width="3"/>
+    <line x1="${pf.x-16}" y1="${pf.y-18}" x2="${pf.x+16}" y2="${pf.y-18}" stroke="var(--trail-edge)" stroke-width="2"/>
+    <line x1="${pf.x-16}" y1="${pf.y-10}" x2="${pf.x+10}" y2="${pf.y-10}" stroke="var(--trail-edge)" stroke-width="2"/>
+    <circle cx="${pf.x+14}" cy="${pf.y+2}" r="8" fill="var(--gold)"/><path d="M${pf.x+10} ${pf.y+8} l-3 10 l7 -4 l7 4 l-3 -10" fill="var(--bad)"/>
+    <text class="rlabel" x="${pf.x}" y="${pf.y+40}" text-anchor="middle">Certificado</text></g>`;
+  // paradas
+  const nextK = S.res.length+1;
+  let nodes="";
+  for(let k=1;k<=N;k++){
+    const p=pos(k); const r=S.res[k-1];
+    const cls = r===true?"ok":r===false?"bad":(k===nextK?"next":"locked");
+    const lbl = r===true?"★":r===false?"✕":k;
+    nodes+=`<g class="node ${cls}"><circle class="ring" cx="${p.x}" cy="${p.y}" r="19"/><circle class="base" cx="${p.x}" cy="${p.y}" r="15"/><text class="nnum" x="${p.x}" y="${p.y+.5}">${lbl}</text></g>`;
+  }
+  const at = S.walkFrom!=null? S.walkFrom : Math.min(S.res.length, N);
+  const hp=pos(at);
+  return `<div class="mapwrap"><svg id="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Mapa da trilha: ${S.res.length} de ${N} desafios concluídos">
+    ${bands}
+    <path d="${d}" fill="none" stroke="var(--trail-edge)" stroke-width="20" stroke-linecap="round"/>
+    <path d="${d}" fill="none" stroke="var(--trail)" stroke-width="15" stroke-linecap="round" stroke-dasharray="1 0"/>
+    <path d="${d}" fill="none" stroke="var(--surface)" stroke-width="1.5" stroke-dasharray="4 8" opacity=".6"/>
+    ${deco}${start}${nodes}${finish}
+    <g id="hero" transform="translate(${hp.x} ${hp.y-12})"><ellipse class="shadow" cx="0" cy="2" rx="13" ry="4"/><g class="hero-bob" id="bob"><g transform="scale(.9)">${CHARS.find(c=>c.id===S.char).art}</g></g></g>
+  </svg></div>`;
+}
+
+function heroPageY(svg,t){
+  const r=svg.getBoundingClientRect(), sc=r.width/W;
+  return r.top+window.scrollY+(pos(t).y-20)*sc;
+}
+function follow(svg,t,smooth){
+  window.scrollTo({top:Math.max(0,heroPageY(svg,t)-window.innerHeight*0.45),behavior:smooth?"smooth":"auto"});
+}
+
+function showMap(){
+  const N=S.ids.length;
+  const done=S.res.length;
+  app.innerHTML=`
+  <div class="topline"><div><div class="eyebrow">${S.mode==="retest"?"Trilha de revisão":S.mode==="rapida"?"Trilha rápida":"Trilha completa"}</div><h2 style="font-size:26px">${esc(REGIOES[(Q[S.ids[Math.min(done,N-1)]]).a].nome)}</h2></div><button class="link" id="sair">Salvar e sair</button></div>
+  ${drawMap()}`;
+  document.getElementById("sair").onclick=()=>{save();home()};
+  renderBar();
+  const svg=document.getElementById("map");
+  requestAnimationFrame(()=>{
+    if(S.walkFrom!=null){
+      const from=S.walkFrom, to=Math.min(done,N);
+      follow(svg,from,false);
+      walk(svg,from,to,()=>{S.walkFrom=null;save();renderBar()});
+    } else follow(svg,Math.min(done,N),false);
+  });
+}
+
+function walk(svg,from,to,cb){
+  const hero=document.getElementById("hero"), bob=document.getElementById("bob");
+  if(reduce||from===to){const p=pos(to);hero.setAttribute("transform",`translate(${p.x} ${p.y-12})`);follow(svg,to,false);cb&&cb();return}
+  bob.classList.add("walking");
+  const dur=1100*Math.abs(to-from), t0=performance.now();
+  (function frame(now){
+    let u=Math.min(1,(now-t0)/dur); const e=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+    const t=from+(to-from)*e, p=pos(t);
+    hero.setAttribute("transform",`translate(${p.x.toFixed(1)} ${(p.y-12).toFixed(1)})`);
+    follow(svg,t,false);
+    if(u<1) requestAnimationFrame(frame);
+    else{bob.classList.remove("walking");bob.classList.add("cheer");cb&&cb()}
+  })(t0);
+}
+
+function renderBar(){
+  const N=S.ids.length, done=S.res.length, ok=S.res.filter(Boolean).length;
+  const last = done===N;
+  bar.hidden=false;
+  bar.innerHTML=`<div class="barin">
+    <div class="who">${avatar(S.char)}<div><b>${esc(S.name)}</b><span class="stars"><i>★</i> ${ok} · ${done}/${N} paradas · ${S.pts} pts</span></div></div>
+    <button class="btn" id="act" ${S.walkFrom!=null?"disabled":""}>${last?(S.mode==="retest"?"Ver resultado":"Pegar o certificado"):`Desafio ${done+1}`}</button>
+  </div>`;
+  document.getElementById("act").onclick= last ? finishTrail : showQuestion;
+}
+
+// ---------- DESAFIO ----------
+function showQuestion(){
+  bar.hidden=true;
+  const k=S.res.length, q=Q[S.ids[k]], N=S.ids.length;
+  let body="";
+  if(q.ctx) body+=`<div class="ctx">${esc(q.ctx)}</div>`;
+  if(q.code) body+=`<div class="code">${q.code.map((l,j)=>`<div class="ln"><span class="n">${j+1}</span>${esc(l)}</div>`).join("")}</div>`;
+  let stem=`<h2 class="q">${esc(q.q)}</h2>`;
+  if(q.items) stem+=`<ol class="items">${q.items.map((t,j)=>`<li><span class="rn">${ROM[j]}.</span><span>${esc(t)}</span></li>`).join("")}</ol><p class="ask">É correto o que se afirma em</p>`;
+  if(q.ar) stem+=`<div class="ar"><p><span class="rn">I.</span> ${esc(q.ar[0])}</p><p class="porque">PORQUE</p><p><span class="rn">II.</span> ${esc(q.ar[1])}</p></div><p class="ask">A respeito dessas asserções, assinale a opção correta.</p>`;
+  app.innerHTML=`
+  <div class="topline"><div class="eyebrow">${esc(REGIOES[q.a].nome)} · desafio ${k+1} de ${N}</div><span class="stars"><i>★</i> ${S.res.filter(Boolean).length} · ${S.pts} pts</span></div>
+  <article class="card">
+    <div class="chead"><span class="tag">${esc(EIXOS[q.a].nome)}</span><span class="tag">${q.f}</span></div>
+    ${body}${stem}
+    <div class="opts">${q.o.map((o,j)=>`<button class="opt" data-k="${j}"><span class="k">${q.o===CE?"CE"[j]:LET[j]}</span><span>${esc(o)}</span></button>`).join("")}</div>
+    <div id="fb"></div>
+  </article>`;
+  let answered=false;
+  app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+    if(answered) return; answered=true;
+    const j=+b.dataset.k, ok=j===q.c;
+    S.res.push(ok);
+    if(ok){S.streak++;S.pts+=100+Math.min(S.streak-1,5)*20}else S.streak=0;
+    S.walkFrom=k; save();
+    app.querySelectorAll(".opt").forEach(x=>{const m=+x.dataset.k;x.disabled=true;if(m===q.c)x.classList.add("ok");else if(m===j)x.classList.add("bad")});
+    document.getElementById("fb").innerHTML=`
+      <div class="fb ${ok?"ok":"bad"}" role="status">
+        <span class="v">${ok?(S.streak>2?`Acertou! ${S.streak} seguidas`:"Acertou!"):"Não foi dessa vez"} · gabarito oficial: ${q.o===CE?q.o[q.c]:LET[q.c]}</span>
+        <p>${esc(q.e)}</p><span class="ref">${esc(q.src)}</span><span class="srcl"><a href="${esc(q.url)}" target="_blank" rel="noopener">Ver prova original</a>${q.gab?` · <a href="${esc(q.gab)}" target="_blank" rel="noopener">gabarito oficial</a>`:""}</span>
+      </div>
+      <div class="rev" style="margin-top:12px"><span class="eyebrow">Revisão do conteúdo</span><p>${esc(q.rv)}</p></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn" id="back">Seguir na trilha →</button></div>`;
+    const bk=document.getElementById("back"); bk.focus({preventScroll:true}); bk.onclick=showMap;
+  });
+  window.scrollTo(0,0);
+}
+
+// ---------- FIM ----------
+function finishTrail(){
+  const N=S.ids.length, svg=document.getElementById("map");
+  document.getElementById("act").disabled=true;
+  walk(svg,N,N+1,()=>setTimeout(()=>{
+    const ok=S.res.filter(Boolean).length;
+    const por=[1,2,3,4].map(a=>{const ix=S.ids.map((id,i)=>Q[id].a===a?i:-1).filter(i=>i>=0);return {a,s:ix.filter(i=>S.res[i]).length,n:ix.length}});
+    const wrong=S.ids.filter((_,i)=>!S.res[i]);
+    if(S.mode==="retest"){ store.del(KEY); return retestDone(ok,N,wrong) }
+    const cert={name:S.name,char:S.char,mode:S.mode,ok,n:N,pts:S.pts,por,date:new Date().toISOString(),wrong};
+    store.set(CERT,cert); store.del(KEY);
+    certificate(cert);
+  },reduce?0:450));
+}
+
+function certificate(c){
+  bar.hidden=true;
+  const pct=Math.round(c.ok/c.n*100);
+  const data=new Date(c.date).toLocaleDateString("pt-BR",{day:"numeric",month:"long",year:"numeric"});
+  const nivel = pct>=90?"com louvor":pct>=70?"com bom aproveitamento":"concluída";
+  app.innerHTML=`
+  <div class="cert" aria-label="Certificado de conclusão">
+    <div class="frame">
+      <svg class="seal" viewBox="-50 -50 100 100" aria-hidden="true">
+        ${Array.from({length:16},(_,i)=>{const a=i*Math.PI/8;return `<circle cx="${(40*Math.cos(a)).toFixed(1)}" cy="${(40*Math.sin(a)).toFixed(1)}" r="9" fill="var(--gold)"/>`}).join("")}
+        <circle r="38" fill="var(--gold)"/><circle r="30" fill="none" stroke="var(--surface)" stroke-width="2"/>
+        <text y="-4" text-anchor="middle" font-family="Baloo 2, sans-serif" font-weight="800" font-size="20" fill="var(--surface)">${pct}%</text>
+        <text y="13" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="7.5" fill="var(--surface)">ACERTOS</text>
+      </svg>
+      <div class="eyebrow">Trilha das Provas · Teste e qualidade de software</div>
+      <h2>Certificado de conclusão</h2>
+      <p>Certificamos que</p>
+      <div class="who">${esc(c.name)}</div>
+      <p>percorreu a ${c.mode==="completa"?"trilha completa":"trilha rápida"} de questões oficiais do Enade e de concursos, ${nivel}, acertando <b>${c.ok} de ${c.n}</b> desafios e somando <b>${c.pts} pontos</b>.</p>
+      <div class="cstats">${c.por.filter(p=>p.n).map(p=>`<div><b>${p.s}/${p.n}</b><span>${esc(REGIOES[p.a].nome)}</span></div>`).join("")}</div>
+      <div class="avatar">${avatar(c.char)}</div>
+      <div class="cfoot"><span>Companheiro de jornada: ${esc(CHARS.find(x=>x.id===c.char).nome)}</span><span>${data}</span></div>
+      <p class="disclaimer">Certificado de participação em atividade de estudo. Não é documento oficial do Inep nem de instituição de ensino.</p>
+    </div>
+  </div>
+  <p class="note">Para guardar, faça uma captura de tela do certificado.</p>
+  <div class="actions">
+    ${c.wrong&&c.wrong.length?`<button class="btn" id="rt">Revisar as ${c.wrong.length} que errei</button>`:""}
+    <button class="btn alt" id="nova">Nova jornada</button>
+  </div>`;
+  if(c.wrong&&c.wrong.length) document.getElementById("rt").onclick=()=>{
+    S={name:c.name,char:c.char,mode:"retest",ids:shuffle(c.wrong).sort((x,y)=>Q[x].a-Q[y].a),res:[],pts:0,streak:0,walkFrom:null};save();showMap();
+  };
+  document.getElementById("nova").onclick=()=>home();
+  window.scrollTo(0,0);
+}
+
+function retestDone(ok,n,wrong){
+  bar.hidden=true;
+  app.innerHTML=`
+  <div class="card" style="align-items:center;text-align:center">
+    <div style="width:110px">${avatar(S.char)}</div>
+    <div class="eyebrow">Trilha de revisão concluída</div>
+    <h2 style="font-size:34px">${ok} de ${n} acertos na revisão</h2>
+    <p class="note">${ok===n?"Você acertou todas as questões que tinha errado. Bom momento para uma nova trilha completa.":"Leia de novo a revisão do conteúdo das que ainda escaparam e tente outra vez."}</p>
+  </div>
+  <div class="actions">
+    ${wrong.length?`<button class="btn" id="rt">Revisar as ${wrong.length} restantes</button>`:""}
+    <button class="btn alt" id="vc">Ver meu certificado</button>
+    <button class="btn alt" id="nova">Nova jornada</button>
+  </div>`;
+  const name=S.name,char=S.char;
+  if(wrong.length) document.getElementById("rt").onclick=()=>{S={name,char,mode:"retest",ids:shuffle(wrong).sort((x,y)=>Q[x].a-Q[y].a),res:[],pts:0,streak:0,walkFrom:null};save();showMap()};
+  document.getElementById("vc").onclick=()=>{const c=store.get(CERT); c?certificate(c):home()};
+  document.getElementById("nova").onclick=()=>home();
+  window.scrollTo(0,0);
+}
+
+home();
+</script>
